@@ -147,6 +147,7 @@ void free_frame(struct frame* frame)
 	free(frame);
 }
 
+// TODO: make this faster with asm
 // trust the process
 ////////////////////////////////
 

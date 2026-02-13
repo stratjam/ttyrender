@@ -5,7 +5,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <time.h>
-#include <sys/param.h>
 #include <sys/time.h>
 #include <linux/input.h>
 #include <errno.h>
@@ -13,27 +12,30 @@
 #include <pthread.h>
 #include "input.h"
 
-int map(int n, int s1, int s2, int d1, int d2)
-{
-	return (int)((float)(n - s1) / (float)(s2 - s1) * (float)(d2 - d1) + d1);
-}
-
 void handle_key(struct input_thread* st, struct input_event data)
 {
 	st->in->keys[data.code] = (bool)data.value;
 }
 
+// ifs are slow; __builtin_expect minimizes this
+#define BOUNDS(q, n, b)				\
+	if (__builtin_expect(q, 0)) {}		\
+	else if (__builtin_expect(n < 0, 0))	\
+		n = 0;				\
+	else if (__builtin_expect(n > b, 0))	\
+		n = b;
+
 void handle_relative(struct input_thread* st, struct input_event data)
 {
 	switch (data.code) {
 	case REL_X:
-		st->in->x += data.value * st->conf.rel_mult_x;
-		st->in->x = MIN(MAX(st->in->x, 0), st->in->w);
+		st->in->x += (float)data.value * st->conf.rel_mult_x;
+		BOUNDS(st->conf.no_bounds, st->in->x, st->in->w);
 		break;
 
 	case REL_Y:
-		st->in->y -= data.value * st->conf.rel_mult_y;
-		st->in->y = MIN(MAX(st->in->y, 0), st->in->h);
+		st->in->y -= (float)data.value * st->conf.rel_mult_y;
+		BOUNDS(st->conf.no_bounds, st->in->y, st->in->h);
 		break;
 	}
 }
@@ -43,23 +45,13 @@ void handle_absolute(struct input_thread* st, struct input_event data)
 	int mapped;
 	switch (data.code) {
 	case ABS_X:
-		if (data.value < st->abs_w_min)
-			st->abs_w_min = data.value;
-		if (data.value > st->abs_w_max)
-			st->abs_w_max = data.value;
-		mapped = map(data.value, st->abs_w_min, st->abs_w_max, 0, st->in->w);
-		st->in->x = (float)mapped * st->conf.abs_mult_x + st->conf.abs_off_x * st->in->w;
-		st->in->x = MIN(MAX(st->in->x, 0), st->in->w);
+		st->in->x = (float)data.value * st->conf.abs_mult_x + st->conf.abs_off_x;
+		BOUNDS(st->conf.no_bounds, st->in->x, st->in->w);
 		break;
 
 	case ABS_Y:
-		if (data.value < st->abs_h_min)
-			st->abs_h_min = data.value;
-		if (data.value > st->abs_h_max)
-			st->abs_h_max = data.value;
-		mapped = map(data.value, st->abs_h_min, st->abs_h_max, 0, st->in->h);
-		st->in->y = (float)mapped * st->conf.abs_mult_y + st->conf.abs_off_y * st->in->h;
-		st->in->y = MIN(MAX(st->in->y, 0), st->in->h);
+		st->in->y = (float)data.value * st->conf.abs_mult_y + st->conf.abs_off_y;
+		BOUNDS(st->conf.no_bounds, st->in->y, st->in->h);
 		break;
 	}
 }

@@ -12,24 +12,19 @@ struct input {
 struct input_conf {
 	float abs_mult_x;
 	float abs_mult_y;
-	float abs_off_x;
-	float abs_off_y;
+	int abs_off_x;
+	int abs_off_y;
 	float rel_mult_x;
 	float rel_mult_y;
+	int no_bounds;
 };
 
 struct input_thread {
 	struct input* in;
 	struct input_conf conf;
-	int abs_w_min;
-	int abs_w_max;
-	int abs_h_min;
-	int abs_h_max;
 	pthread_t thr;
 	int fd;
 };
-
-int map(int n, int s1, int s2, int d1, int d2);
 
 struct input create_input_state(int w, int h);
 
