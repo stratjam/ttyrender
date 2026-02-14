@@ -1,7 +1,8 @@
 #ifndef INPUT_H_
 #define INPUT_H_
 
-struct input {
+struct input
+{
 	int w;
 	int h;
 	int x;
@@ -9,7 +10,8 @@ struct input {
 	bool keys[1024];
 };
 
-struct input_conf {
+struct input_conf
+{
 	float abs_mult_x;
 	float abs_mult_y;
 	int abs_off_x;
@@ -19,7 +21,8 @@ struct input_conf {
 	int no_bounds;
 };
 
-struct input_thread {
+struct input_thread
+{
 	struct input* in;
 	struct input_conf conf;
 	pthread_t thr;

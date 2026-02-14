@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-struct frame_buffer {
+struct frame_buffer
+{
 	int stride;
 	int w;
 	int h;
@@ -11,12 +12,14 @@ struct frame_buffer {
 	int fd;
 };
 
-struct frame {
+struct frame
+{
 	struct frame_buffer* fb;
 	uint8_t* data;
 };
 
-struct image {
+struct image
+{
 	int w;
 	int h;
 	int size;
