@@ -9,7 +9,6 @@
 #include <linux/input.h>
 #include <errno.h>
 #include <signal.h>
-#include <pthread.h>
 #include "input.h"
 
 void handle_key(struct input_thread* st, struct input_event data)
@@ -29,12 +28,12 @@ void handle_relative(struct input_thread* st, struct input_event data)
 {
 	switch (data.code) {
 	case REL_X:
-		st->in->x += (float)data.value * st->conf.rel_mult_x;
+		st->in->x += (float)data.value * st->conf.mult_x;
 		BOUNDS(st->conf.no_bounds, st->in->x, st->in->w);
 		break;
 
 	case REL_Y:
-		st->in->y -= (float)data.value * st->conf.rel_mult_y;
+		st->in->y -= (float)data.value * st->conf.mult_y;
 		BOUNDS(st->conf.no_bounds, st->in->y, st->in->h);
 		break;
 	}
@@ -45,12 +44,12 @@ void handle_absolute(struct input_thread* st, struct input_event data)
 	int mapped;
 	switch (data.code) {
 	case ABS_X:
-		st->in->x = (float)data.value * st->conf.abs_mult_x + st->conf.abs_off_x;
+		st->in->x = (float)data.value * st->conf.mult_x + st->conf.off_x;
 		BOUNDS(st->conf.no_bounds, st->in->x, st->in->w);
 		break;
 
 	case ABS_Y:
-		st->in->y = (float)data.value * st->conf.abs_mult_y + st->conf.abs_off_y;
+		st->in->y = (float)data.value * st->conf.mult_y + st->conf.off_y;
 		BOUNDS(st->conf.no_bounds, st->in->y, st->in->h);
 		break;
 	}
@@ -86,28 +85,28 @@ void* input_thread(struct input_thread* st)
 	return NULL;
 }
 
-int start_input_thread(
+struct input_thread* start_input_thread(
 		struct input* in,
 		const struct input_conf conf,
-		char* evfile,
-		struct input_thread** st_ptr)
+		char* evfile)
 {
-	*st_ptr = malloc(sizeof(struct input_thread));
+	struct input_thread* st = malloc(sizeof(struct input_thread));
+	if (!st)
+		return NULL;
 
-	struct input_thread* st = *st_ptr;
 	*st = (const struct input_thread){ 0 };
 
 	st->fd = open(evfile, O_RDWR);
 	if (st->fd == -1)
-		return 1;
+		return NULL;
 
 	st->conf = conf;
 	st->in = in;
 
 	if (pthread_create(&st->thr, NULL, (void*(*)(void*))input_thread, (void*)st))
-		return 2;
+		return NULL;
 
-	return 0;
+	return st;
 }
 
 void stop_input_thread(struct input_thread* st)

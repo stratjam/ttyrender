@@ -26,8 +26,6 @@ struct image
 	uint8_t* data;
 };
 
-int read_range(int fd, char* buf, int len, char min, char max);
-
 struct frame_buffer* get_frame_buffer();
 
 void free_frame_buffer(struct frame_buffer* fb);

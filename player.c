@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include "player.h"
 #include "graphics.h"
-#include "input.h"
+#include "autoinput.h"
 #include "term.h"
 
 int player(int argc, char** argv)
@@ -17,7 +17,7 @@ int player(int argc, char** argv)
 		return 1;
 	}
 
-	struct termios orig_term = prepare_term();
+	//struct termios orig_term = prepare_term();
 
 	int anim_time = 1. / atof(argv[0]) * 1000000.;
 
@@ -26,31 +26,27 @@ int player(int argc, char** argv)
 	for (int i = 0; i < im_count; i++) {
 		ims[i] = load_image(argv[i + 1]);
 		if (!ims[i])
-			return 1;
+			goto fail_img;
 	}
 
 	struct frame_buffer* fb = get_frame_buffer();
 	if (!fb) {
 		fputs("Failed to get frame buffer.\n", stderr);
-		return 2;
+		goto fail_fb;
 	}
 	struct frame* frame = create_frame(fb);
 	if (!frame) {
 		fputs("Failed to create frame.\n", stderr);
-		return 3;
+		goto fail_frame;
 	}
 
 	struct input in = create_input_state(fb->w, fb->h);
-	struct input_thread* in_thread_1;
-	struct input_thread* in_thread_2;
 
-	struct input_conf in_conf = { 1., 1., 0., 0., 1., 1. };
-	if (start_input_thread(&in, in_conf, "/dev/input/event6", &in_thread_1))
-		puts("Failed to open ev4!");
-
-	if (start_input_thread(&in, in_conf, "/dev/input/event8", &in_thread_2))
-		puts("Failed to open ev8!");
-
+	struct input_thread** in_threads = setup_input_threads("input.conf", &in);
+	if (!in_threads) {
+		fputs("Failed to make input threads.\n", stderr);
+		goto fail_input;
+	}
 
 	int x = in.x;
 	int y = in.y;
@@ -90,14 +86,17 @@ int player(int argc, char** argv)
 	}
 	printf("Avg render time = %dµs\n", tot_time / tot_frames);
 
-	stop_input_thread(in_thread_1);
-	stop_input_thread(in_thread_2);
+	cleanup_input_threads(in_threads);
 
+fail_input:
+	free_frame_buffer(fb);
+fail_frame:
+	free_frame(frame);
+fail_fb:
 	for (int i = 0; i < im_count; i++) {
 		free_image(ims[i]);
 	}
-	free_frame(frame);
-	free_frame_buffer(fb);
 
-	restore_term(orig_term);
+fail_img:
+	//restore_term(orig_term);
 }
